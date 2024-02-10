@@ -1,0 +1,25 @@
+ 1056  tar -zxvf apache-tomcat-10.1.18.tar.gz
+ 1057  ls -ltr
+ 1058  mv apache-tomcat-10.1.18/ /opt/tomcat1
+ 1059  clear
+ 1060  ls -ltr
+ 1061  cd
+ 1062  clear
+ 1063  cd /opt/tomcat1/
+ 1064  ls -ltr
+ 1065  netstat -an |grep 8080
+ 1066  cd bin/
+ 1067  ls
+ 1068  ./catalina.sh start
+ 1069  cd ../logs/
+ 1070  ls -ltr
+ 1071  less catalina.out
+ 1072  clear
+ 1073  netstat -an |grep 8080
+ 1074  ifconfig
+ 1075  cd ..
+ 1076  ls
+ 1077  ls -ltr
+ 1078  cd bin/
+ 1079  ls -ltr
+ 1080  ./catalina.sh stop
