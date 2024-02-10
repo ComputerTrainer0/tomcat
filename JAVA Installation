@@ -1,0 +1,10 @@
+ 1042  tar -zxvf jdk-11.0.21_linux-x64_bin.tar.gz
+ 1043  ls -ltr
+ 1044  mv jdk-11.0.21/ /opt/java/
+ 1045  /opt/java/bin/java
+ 1046  /opt/java/bin/java -version
+ 1047  java -version
+ 1048  sudo ln -s /opt/java/bin/java /usr/local/bin/
+ 1049  ls -ltr /usr/local/bin/
+ 1050  java -version
+ 1051  which java
