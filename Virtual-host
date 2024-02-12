@@ -1,0 +1,36 @@
+mkdir /opt/content/war -p
+cd /opt/content/war/
+mkdir spec1
+mkdir spec2
+mkdir spec3
+cp /opt/software/EAR/spec1.war spec1/
+cp /opt/software/EAR/spec2.war spec2/
+cp /opt/software/EAR/spec3.war spec3/
+
+
+vi server.xml
+
+      <Host name="www.spec1.com"  appBase="/opt/content/war/spec1/"
+            unpackWARs="true" autoDeploy="true">
+              <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                prefix="spec1_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+
+      <Host name="www.spec2.com"  appBase="/opt/content/war/spec2/"
+            unpackWARs="true" autoDeploy="true">
+              <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="spec2_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+
+            <Host name="www.spec3.com"  appBase="/opt/content/war/spec3/"
+            unpackWARs="true" autoDeploy="true">
+              <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="spec3_access_log" suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+
