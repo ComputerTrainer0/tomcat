@@ -1,0 +1,8 @@
+ 1054  vi examples/META-INF/context.xml
+ 1055  vi host-manager/META-INF/context.xml
+ 1056  vi manager/META-INF/context.xml
+
+Disabling the remote address valve
+
+     <!--<Valve className="org.apache.catalina.valves.RemoteAddrValve"
+  allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />-->
