@@ -1,0 +1,6 @@
+Adding user:
+
+tomcat-users.xml
+<user username="admin" password="admin" roles="manager-gui,admin-gui"/>
+  <user username="host" password="host" roles="admin-gui"/>
+  <user username="manager" password="manager" roles="manager-status"/>
