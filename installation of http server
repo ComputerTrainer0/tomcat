@@ -1,0 +1,9 @@
+1199  tar -zxvf httpd_tomcat10.tar.gz
+1201  mv httpd /opt/
+1208  sudo yum -y install apr apr-util
+1209  ./apachectl -version
+1228  sed -i "s/was-host1/was-host1/g" httpd.conf
+1229  sed -i "s/was-host1/was-host1/g" extra/httpd-vhosts.conf
+
+
+
