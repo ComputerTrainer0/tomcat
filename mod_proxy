@@ -21,6 +21,34 @@ Simple Proxy:
 
 Proxy_blaancer:
 
+  <IfModule proxy_module>
+  ProxyRequests Off
+  ProxyPass /examples balancer://mycluster stickysession=JSESSIONID
+  ProxyPassReverse /examples balancer://mycluster stickysession=JSESSIONID
+  <Proxy balancer://mycluster>
+  BalancerMember http://was-host1:8080/examples route=server1
+  BalancerMember http://was-host1:8081/examples route=server2
+  </Proxy>
+  </IfModule>
+
+Disable the proxy on the below VH:
+
+  <VirtualHost was-host1:80>
+  ServerAdmin examples@examples.com
+  DocumentRoot /opt/content/html/example/
+  ServerName www.example.com
+  ServerAlias example.com
+  ErrorLog logs/examples.com-error_log
+  CustomLog logs/examples.com-access_log common
+  LogLevel debug
+  #ProxyPass /examples http://www.example.com:8080/examples/
+  #ProxyPassReverse /examples http://www.example.com:8080/examples/
+  </VirtualHost>
+
+Enable Modules:
+LoadModule proxy_balancer_module modules/mod_proxy_balancer.so
+LoadModule lbmethod_byrequests_module modules/mod_lbmethod_byrequests.so
+
 
 Supporting Files:
 ========================
