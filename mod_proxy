@@ -1,0 +1,36 @@
+
+Simple Proxy:
+
+  <VirtualHost was-host1:80>
+  ServerAdmin examples@examples.com
+  DocumentRoot /opt/content/html/example/
+  ServerName www.example.com
+  ServerAlias example.com
+  ErrorLog logs/examples.com-error_log
+  CustomLog logs/examples.com-access_log common
+  LogLevel debug
+  ProxyPass /examples http://www.example.com:8080/examples/
+  ProxyPassReverse /examples http://www.example.com:8080/examples/
+  </VirtualHost>
+
+<Location "/examples">
+    Options FollowSymLinks
+    FileETag All -INode
+    Require all granted
+</Location>
+
+Proxy_blaancer:
+
+
+Supporting Files:
+========================
+
+/opt/content/html/example/
+vi index.html
+
+<HTML>
+<body bgcolor=red><br>
+Hello welcome to example.COM<br><br>
+Click <a href="http://www.example.com/examples/"> here </a> to get redirected
+</body>
+</HTML>
