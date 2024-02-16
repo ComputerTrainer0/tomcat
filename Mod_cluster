@@ -1,0 +1,47 @@
+
+
+Server.xml cluster configuration:
+
+         <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
+                        channelSendOptions="8">
+                        <Manager className="org.apache.catalina.ha.session.BackupManager" expireSessionsOnShutdown="false"
+   notifyListenersOnReplication="true"/>
+
+        <Channel className="org.apache.catalina.tribes.group.GroupChannel">
+          <Membership className="org.apache.catalina.tribes.membership.McastService"
+            address="228.0.0.4"
+            port="45564"
+            frequency="500"
+            dropTime="3000"/>
+
+          <Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter">
+            <Transport className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"/>
+          </Sender>
+
+          <Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+            address="auto" port="4000" autoBind="100"
+            selectorTimeout="5000" maxThreads="6"/>
+
+          <Interceptor className="org.apache.catalina.tribes.group.interceptors.TcpFailureDetector"/>
+          <Interceptor className="org.apache.catalina.tribes.group.interceptors.MessageDispatchInterceptor"/>
+
+        </Channel>
+
+        <Valve className="org.apache.catalina.ha.tcp.ReplicationValve" filter=""/>
+
+        <ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/>
+
+      </Cluster>
+
+
+If you wanna go for Delta: (And make sure you replace the exiting tag)
+
+          <Manager className="org.apache.catalina.ha.session.DeltaManager" expireSessionsOnShutdown="false" notifyListenersOnReplication="true"/>
+
+
+Add it in 
+/opt/tomcat1/webapps/examples/WEB-INF/web.xml
+/opt/tomcat2/webapps/examples/WEB-INF/web.xml
+
+
+<distributable/>
