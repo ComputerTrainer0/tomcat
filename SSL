@@ -1,0 +1,48 @@
+Tomcat:
+
+vi server.xml
+
+   <Connector
+    protocol="org.apache.coyote.http11.Http11NioProtocol"
+    port="8443"
+    maxThreads="150"
+    SSLEnabled="true" ciphers="TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA">
+  <SSLHostConfig>
+    <Certificate
+      certificateKeystoreFile="conf/localhost-rsa.jks"
+      certificateKeystorePassword="localhost-rsa"
+      certificateKeyAlias="localhost-rsa"
+      type="RSA"
+      />
+    </SSLHostConfig>
+    </Connector>
+
+===============
+
+ keytool -genkey -alias localhost-rsa -keyalg RSA -keystore localhost-rsa.jks
+
+HTTP SSL:
+
+vi extra/httpd-vhost.conf
+
+Listen 443
+
+<VirtualHost was-host1:443>
+  ServerAdmin examples@examples.com
+  DocumentRoot /opt/content/html/example/
+  ServerName www.example.com
+  ServerAlias example.com
+  ErrorLog logs/examples.com-ssl-error_log
+  CustomLog logs/examples.com-ssl-access_log common
+  LogLevel debug
+  JkMount /examples/* loadbalancer
+
+        SSLEngine on
+        SSLProtocol all -SSLv2 -SSLv3
+        #SSLProtocol  -SSLv2 -SSLv3 -TLSv1.0 +TLSv1.1 +TLSv1.2
+        SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
+        #SSLCipherSuite RC4-SHA:AES128-SHA:HIGH:MEDIUM:!aNULL:!MD5
+        SSLCertificateFile /opt/httpd/conf/web_example.crt
+        SSLCertificateKeyFile /opt/httpd/conf/web_example.key
+        #SSLCertificateChainFile /opt/httpd/conf/web_example.crt
+</VirtualHost>
