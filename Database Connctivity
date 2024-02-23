@@ -6,6 +6,8 @@ sudo yum -y install mysql-server.x86_64
 
 service mysqld start
 
+mysqladmin -u root password password
+
 mysql -uroot -ppassword
 
 mysql -uroot -ppassword < /opt/software/mysql/world.sql
