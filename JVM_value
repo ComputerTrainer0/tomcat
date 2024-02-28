@@ -1,0 +1,8 @@
+
+
+vi catalina.sh
+
+CATALINA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:InitiatingHeapOccupancyPercent=45 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:G1HeapRegionSize=4M -Xlog:gc:/opt/tomcat1/logs/gc.log:tags,time,uptime,level:filecount=5,filesize=2M"
+
+
+-Xlog:gc*=info:file=/opt/jboss/standalone/log/g1gc.log::filecount=10,filesize=10M"
