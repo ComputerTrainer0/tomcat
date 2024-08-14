@@ -206,6 +206,75 @@ spec:
 
 ========================================================================================================================
 
+7.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-service
+  labels:
+    env: dev
+    app: devops-web
+    type: service
+spec:
+  selector:
+    env: dev
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30000
+  type: NodePort
+
+
+
+8.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-service
+  labels:
+    env: dev
+    app: devops-app
+    type: service
+spec:
+  selector:
+    env: dev
+  ports:
+  - protocol: TCP
+    port: 81
+    targetPort: 8080
+    nodePort: 30001
+  type: NodePort
+
+
+
+9.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-tomcat-service
+  labels:
+    env: dev
+    app: devops-web-app
+    type: service
+spec:
+  selector:
+    env: dev
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30000
+  - name: tomcat
+    protocol: TCP
+    port: 81
+    targetPort: 8080
+    nodePort: 30001
+  type: NodePort
 
 
 ============================================================
@@ -213,6 +282,144 @@ spec:
 Section 10: Mastering - Multi Cluster Deployment in Kube With Tomcat - No Downtime
 
 ============================================================
+
+=============
+Part 10: Blue & Green Deployment
+
+vi 10-b.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-tomcat-b-deploy
+  labels:
+    env: dev
+    app: devops-web-app
+    type: deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      env: dev
+      app: devops-web-app
+      method: blue
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        env: dev
+        app: devops-web-app
+        type: deploy
+        method: blue
+        version: v1
+    spec:
+      containers:
+      - name: http
+        image: httpd:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/local/apache2/htdocs/
+      - name: tomcat
+        image: tomcat:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: war-volume
+          mountPath: /usr/local/tomcat/webapps/
+      volumes:
+      - name: html-volume
+        hostPath:
+          path: /opt/content/v1/
+          type: Directory
+      - name: war-volume
+        hostPath:
+          path: /opt/content/v1/war/
+          type: Directory
+:wq
+
+vi 11-g.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-tomcat-g-deploy
+  labels:
+    env: dev
+    app: devops-web-app
+    type: deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      env: dev
+      app: devops-web-app
+      method: green
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        env: dev
+        app: devops-web-app
+        type: deploy
+        method: green
+        version: v2
+    spec:
+      containers:
+      - name: http
+        image: httpd:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/local/apache2/htdocs/
+      - name: tomcat
+        image: tomcat:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: war-volume
+          mountPath: /usr/local/tomcat/webapps/
+      volumes:
+      - name: html-volume
+        hostPath:
+          path: /opt/content/v2/
+          type: Directory
+      - name: war-volume
+        hostPath:
+          path: /opt/content/v2/war/
+          type: Directory
+:wq
+
+# service deployment pointing to Blue
+
+vi 12-bg.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sterling-lb-svc
+spec:
+  selector:
+    env: dev
+    method: blue
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30000
+  - name: tomcat
+    protocol: TCP
+    port: 81
+    targetPort: 8080
+    nodePort: 30001
+  type: NodePort
+:wq
+
 
 
 ========================================================================================================================
