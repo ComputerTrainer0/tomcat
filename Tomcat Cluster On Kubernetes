@@ -157,7 +157,52 @@ Section 9: Mastering - Kubernetes Services With Tomcat Cluster (Load Balancing)
 
 ============================================================
 
+6.yaml
 
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: tomcat-replica
+  labels:
+    env: dev
+    app: devops-app
+    type: replica
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: devops-app
+  template:
+    metadata:
+      labels:
+        env: dev
+        app: devops-app
+        type: pod
+    spec:
+      containers:
+      - name: http
+        image: httpd:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/local/apache2/htdocs/
+      - name: tomcat
+        image: tomcat:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: war-volume
+          mountPath: /usr/local/tomcat/webapps/
+      volumes:
+      - name: html-volume
+        hostPath:
+          path: /opt/content/
+          type: Directory
+      - name: war-volume
+        hostPath:
+          path: /opt/content/war/
+          type: Directory
 
 ========================================================================================================================
 
