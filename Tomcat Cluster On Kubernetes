@@ -401,7 +401,7 @@ vi 12-bg.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: sterling-lb-svc
+  name: httpd-tomcat-bg-service
 spec:
   selector:
     env: dev
@@ -421,26 +421,151 @@ spec:
 :wq
 
 
-
-========================================================================================================================
-
-
-
 ============================================================
 
 Section 11: Mastering - Kubernetes Probs With Tomcat Cluster (Liveness and Readiness)
 
 ============================================================
 
+13.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tomcat-pod
+  labels:
+    app: tomcat
+spec:
+  containers:
+  - name: tomcat
+    image: tomcat:latest
+    ports:
+    - containerPort: 8080
+    volumeMounts:
+    - name: war-volume
+      mountPath: /usr/local/tomcat/webapps/
+    readinessProbe:
+      httpGet:
+        path: /samples/
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+  volumes:
+  - name: war-volume
+    hostPath:
+      path: /opt/content/v1/war/
+      type: Directory
 
 
-========================================================================================================================
 
+14.yaml
 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tomcat-pod
+  labels:
+    app: tomcat
+spec:
+  containers:
+  - name: tomcat
+    image: tomcat:latest
+    ports:
+    - containerPort: 8080
+      hostPort: 8080
+    volumeMounts:
+    - name: war-volume
+      mountPath: /usr/local/tomcat/webapps/
+    readinessProbe:
+      httpGet:
+        path: /samples/
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+    livenessProbe:
+      httpGet:
+        path: /samples/
+        port: 8080
+      initialDelaySeconds: 60
+      periodSeconds: 20
+      timeoutSeconds: 5
+      failureThreshold: 3
+  volumes:
+  - name: war-volume
+    hostPath:
+      path: /opt/content/v1/war/
+      type: Directory
 
 ============================================================
 
 Section 12: 
 
 
+vi 15.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat-apache
+spec:
+  selector:
+    matchLabels:
+      run: tomcat-apache
+  template:
+    metadata:
+      labels:
+        run: tomcat-apache
+    spec:
+      containers:
+      - name: tomcat-apache
+        image: tomcat:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: war-volume
+          mountPath: /usr/local/tomcat/webapps/
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
+      volumes:
+      - name: war-volume
+        hostPath:
+          path: /opt/content/v1/war/
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-apache
+  labels:
+    run: tomcat-apache
+spec:
+  ports:
+  - port: 8080
+  selector:
+    run: tomcat-apache
+:wq
+
+kubectl autoscale deployment tomcat-apache --cpu-percent=20 --min=1 --max=10
+
+wget https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+add the follwoing line to components.yaml
+
+  - --kubelet-insecure-tls
+
+kubectl apply -f components.yaml
+kubectl describe deployment/metrics-server -n kube-system
+kubectl get pods -n kube-system
+
+
+kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://tomcat-apache:8080/samples/; done"
 
