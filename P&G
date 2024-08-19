@@ -1,1 +1,287 @@
 
+Prometheus and Grafana
+
+wget https://repo.maven.apache.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/1.0.1/jmx_prometheus_javaagent-1.0.1.jar
+
+vi setenv.sh 
+CATALINA_OPTS="$CATALINA_OPTS -javaagent:/usr/local/tomcat/lib/jmx_prometheus_javaagent.jar=9090:/usr/local/tomcat/lib/jmx_exporter_config.yaml"
+
+cat jmx_exporter_config.yaml
+---
+lowercaseOutputLabelNames: true
+lowercaseOutputName: true
+whitelistObjectNames: ["java.lang:type=OperatingSystem", "Catalina:*"]
+blacklistObjectNames: []
+rules:
+  - pattern: 'Catalina<type=Server><>serverInfo: (.+)'
+    name: tomcat_serverinfo
+    value: 1
+    labels:
+      serverInfo: "$1"
+    type: COUNTER
+  - pattern: 'Catalina<type=GlobalRequestProcessor, name=\"(\w+-\w+)-(\d+)\"><>(\w+):'
+    name: tomcat_$3_total
+    labels:
+      port: "$2"
+      protocol: "$1"
+    help: Tomcat global $3
+    type: COUNTER
+  - pattern: 'Catalina<j2eeType=Servlet, WebModule=//([-a-zA-Z0-9+&@#/%?=~_|!:.,;]*[-a-zA-Z0-9+&@#/%=~_|]), name=([-a-zA-Z0-9+/$%~_-|!.]*), J2EEApplication=none, J2EEServer=none><>(requestCount|processingTime|errorCount):'
+    name: tomcat_servlet_$3_total
+    labels:
+      module: "$1"
+      servlet: "$2"
+    help: Tomcat servlet $3 total
+    type: COUNTER
+  - pattern: 'Catalina<type=ThreadPool, name="(\w+-\w+)-(\d+)"><>(currentThreadCount|currentThreadsBusy|keepAliveCount|connectionCount|acceptCount|acceptorThreadCount|pollerThreadCount|maxThreads|minSpareThreads):'
+    name: tomcat_threadpool_$3
+    labels:
+      port: "$2"
+      protocol: "$1"
+    help: Tomcat threadpool $3
+    type: GAUGE
+  - pattern: 'Catalina<type=Manager, host=([-a-zA-Z0-9+&@#/%?=~_|!:.,;]*[-a-zA-Z0-9+&@#/%=~_|]), context=([-a-zA-Z0-9+/$%~_-|!.]*)><>(processingTime|sessionCounter|rejectedSessions|expiredSessions):'
+    name: tomcat_session_$3_total
+    labels:
+      context: "$2"
+      host: "$1"
+    help: Tomcat session $3 total
+    type: COUNTER
+
+vi Dockerfile
+# Use the official Tomcat 10 image as a base
+FROM tomcat:10.0
+
+# Set environment variables
+ENV CATALINA_HOME=/usr/local/tomcat
+
+# Copy the JMX Exporter JAR and the configuration YAML file
+ADD jmx_prometheus_javaagent.jar $CATALINA_HOME/lib/jmx_prometheus_javaagent.jar
+ADD jmx_exporter_config.yaml $CATALINA_HOME/lib/jmx_exporter_config.yaml
+
+# Copy the setenv.sh script to Tomcat's bin directory
+COPY setenv.sh $CATALINA_HOME/bin/
+
+# Make setenv.sh executable
+RUN chmod +x $CATALINA_HOME/bin/setenv.sh
+
+# Expose port 8080 for Tomcat and 9090 for Prometheus metrics
+EXPOSE 8080 9090
+
+# Start Tomcat
+CMD ["catalina.sh", "run"]
+
+
+
+docker build -t tomcat-prometheus:latest .    
+docker tag tomcat-prometheus:latest beyondcloudai/tomcat-prometheus:latest 
+docker push beyondcloudai/tomcat-prometheus:latest
+
+
+vi tomcat.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-service
+  labels:
+    app: tomcat
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  - port: 9090
+    targetPort: 9090
+    name: prom
+  selector:
+    app: tomcat
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat
+  labels:
+    app: tomcat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tomcat
+  template:
+    metadata:
+      labels:
+        app: tomcat
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      containers:
+      - name: tomcat
+        image: beyondcloudai/tomcat-prometheus:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: JAVA_AGENT_PORT
+          value: "9090"
+        volumeMounts:
+        - name: war-volume
+          mountPath: /usr/local/tomcat/webapps/
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "1"
+          limits:
+            memory: "1024Mi"
+            cpu: "1"
+      volumes:
+      - name: war-volume
+        hostPath:
+          path: /opt/content/v1/war/
+          type: Directory
+
+
+cat > prometheus-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['prometheus-service:9090']
+
+      - job_name: 'tomcat-jmx'
+        static_configs:
+          - targets: ['tomcat-service:9090']
+
+
+
+cat > prometheus.yml
+global:
+  scrape_interval: 15s  # By default, scrape targets every 15 seconds.
+
+scrape_configs:
+  # Scrape configuration for Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape configuration for Tomcat JMX
+  - job_name: 'tomcat-jmx'
+    static_configs:
+      - targets: ['tomcat-server:9090']
+
+
+vi prometheus-server.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: prometheus-config-volume
+          mountPath: /etc/prometheus/
+        - name: prometheus-data
+          mountPath: /prometheus
+      volumes:
+      - name: prometheus-config-volume
+        configMap:
+          name: prometheus-config
+      - name: prometheus-data
+        emptyDir: {}
+
+
+vi prometheus-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - name: web
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+    nodePort: 30000
+  type: NodePort
+
+
+vi grafana.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 32000
+  selector:
+    app: grafana
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"  # Change to a secure password
+
+
+
+kubectl run -i --tty load-generator1 --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://tomcat-service:8080/samples/; done"
+
+jvm_threads_state
+jvm_gc_collection_seconds_sum
+
+
